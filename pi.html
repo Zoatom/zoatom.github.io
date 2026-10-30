@@ -7,6 +7,7 @@
 </style>
 
 <body>
+    <a href="index.html"><img src="Icon.png" width="28" style="position: absolute;"></a>
     <div id="pi">
        Insert PI here
     </div>
@@ -52,7 +53,7 @@
         }
         let pi = s.toString()
         pi = pi.slice(0, (pi.length - errorCorrection) - decimals) + "." + pi.slice((pi.length - errorCorrection) - decimals, (pi.length - errorCorrection))
-        document.getElementById("pi").innerHTML = pi
+        document.getElementById("pi").innerHTML = '  ' + pi
         
     }
     anim(1)
