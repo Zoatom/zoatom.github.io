@@ -1,0 +1,59 @@
+<style>
+    div{
+        word-wrap: break-word;
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 30;
+    }
+</style>
+
+<body>
+    <div id="pi">
+       Insert PI here
+    </div>
+</body>
+
+<script>
+    const decimals = 767*4 // 767
+    const terms = Math.ceil(decimals / 3 * 5)
+    const errorCorrection = 10
+    function pow(a, b){
+        prod = 1n
+        for(; b > 0n; b--){
+            prod *= a
+        }
+        return prod
+    }
+    function fac(a){
+        let prod = 1n
+        while (a > 1n){
+            prod *= a
+            a--
+        }
+        return prod
+    }
+    let s = 0n
+    let cbc
+    let multiplyer = pow(10n, BigInt(decimals + errorCorrection))
+    let n = 0n
+
+    let prevTime = 0
+    function anim(time){
+        if (n < terms){
+            requestAnimationFrame(anim)
+        }else{
+            console.log("done")
+        }
+        let iter = Math.ceil(500/(time - prevTime))
+        prevTime = time
+        for (let i = 0; i < iter; i++){
+            cbc = fac(2n * n) / pow(fac(n), 2n)
+            s += (3n * cbc) * multiplyer / (pow(16n, n) * (2n * n + 1n))
+            n++
+        }
+        let pi = s.toString()
+        pi = pi.slice(0, (pi.length - errorCorrection) - decimals) + "." + pi.slice((pi.length - errorCorrection) - decimals, (pi.length - errorCorrection))
+        document.getElementById("pi").innerHTML = pi
+        
+    }
+    anim(1)
+</script>

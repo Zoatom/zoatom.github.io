@@ -1,0 +1,459 @@
+<head>
+    <style>
+        body{
+            margin: 0;
+        }
+        div{
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            background-color: rgb(25,25,25);
+            display: flex;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <canvas></canvas>
+    </div>
+
+    <script>
+        class Vector{
+    constructor(x = 0, y = 0, z = 0){
+        this.x = x
+        this.y = y
+        this.z = z
+    }
+    add(vector){
+        this.x += vector.x
+        this.y += vector.y
+        this.z += vector.z
+    }
+    sub(vector){
+        this.x -= vector.x
+        this.y -= vector.y
+        this.z -= vector.z
+    }
+    mult(scalar){
+        this.x *= scalar
+        this.y *= scalar
+        this.z *= scalar
+    }
+    div(scalar){
+        this.x /= scalar
+        this.y /= scalar
+        this.z /= scalar
+    }
+    setLength(length){
+        let magnitude = lengthOf(this)
+        if (magnitude == 0) return
+        this.div(magnitude)
+        this.mult(length)
+    }
+    maxLim(limit){
+        let length = lengthOf(this)
+        if (length > limit) this.setLength(limit)
+    }
+    minLim(limit){
+        let length = lengthOf(this)
+        if (length < limit) this.setLength(limit)
+    }
+    floor(){
+        this.x = Math.floor(this.x)
+        this.y = Math.floor(this.y)
+        this.z = Math.floor(this.z)
+    }
+    ceil(){
+        this.x = Math.ceil(this.x)
+        this.y = Math.ceil(this.y)
+        this.z = Math.ceil(this.z)
+    }
+}
+
+function vectorAdd(u, v){
+    return new Vector(u.x + v.x, u.y + v.y, u.z + v.z)
+}
+function vectorSub(u, v){
+    return new Vector(u.x - v.x, u.y - v.y, u.z - v.z)
+}
+function vectorMult(u, a){
+    return new Vector(u.x * a, u.y * a, u.z * a)
+}
+function vectorDiv(u, a){
+    return new Vector(u.x / a, u.y / a, u.z / a)
+}
+function dotProd(u, v){
+    return u.x * v.x + u.y * v.y + u.z * v.z
+}
+function normalize(u){
+    return vectorDiv(u, lengthOf(u))
+}
+function lengthOf(u){
+    return Math.sqrt(dotProd(u, u))
+}
+    </script>
+    <script>
+        const camera = new Vector(0, 0, -785 * 0.5)
+const cameraVel = new Vector()
+let zoom = 785 * 0.6
+let xAngularVel = 0
+let yAngularVel = 0
+let xAngle = 0
+let yAngle = 0
+
+const boidAmount = 4000
+
+const separationForce = 0.4
+const alignmentForce = 0.06
+const cohesionForce = 0.04
+
+const turbulenceForce = 0//.02
+const boundForce = 0.0001
+
+const detectionRadius = Math.pow(250000000 / boidAmount, 1 / 3)
+const partitionGridCellSize = detectionRadius * 0.9
+const boidSize = detectionRadius / 7
+const speed = detectionRadius / 15
+const acceleration = 0.02
+const viewCone = -0.4
+const maxBoidInView = Infinity
+
+const staggerAmount = 6
+    </script>
+    <script>
+        function moveCamera(){
+    let forward = keys.includes("w") - keys.includes("s")
+    let sideways = keys.includes("d") - keys.includes("a")
+    let xTurn = keys.includes("arrowup") - keys.includes("arrowdown")
+    let yTurn = keys.includes("arrowright") - keys.includes("arrowleft")
+    zoom += (((keys.includes("c") * 1.5 + 0.6) * canvas.height) - zoom) / 10
+    
+    let turn = new Vector(xTurn, yTurn)
+    turn.setLength(1)
+
+    cameraVel.y += (keys.includes("shift") - keys.includes(" ")) * 5
+    cameraVel.x += Math.cos(yAngle + Math.PI / 2) * forward * 5
+    cameraVel.z += Math.sin(yAngle + Math.PI / 2) * forward * 5
+    cameraVel.x += Math.cos(yAngle) * sideways * 5
+    cameraVel.z += Math.sin(yAngle) * sideways * 5
+
+    xAngularVel += turn.x * -6 * (1 / zoom)
+    yAngularVel += turn.y * -6 * (1 / zoom)
+    xAngularVel *= 0.8
+    yAngularVel *= 0.8
+
+    xAngle += xAngularVel
+    yAngle += yAngularVel
+
+    cameraVel.mult(0.85)
+    camera.add(cameraVel)
+}
+    </script>
+    <script>
+        let spatialLookup = []
+let startIndices = []
+
+function getKey(position, cellOffset = new Vector()) {
+    let cell = vectorDiv(position, partitionGridCellSize)
+    cell.floor()
+    cell.add(cellOffset)
+    let key = Math.abs((cell.x * 345791 + cell.y * 646549 + cell.z * 845491) % (boids.length))
+    return key
+}
+
+function partition() {
+    spatialLookup = []
+    startIndices = []
+    for (i in boids) {
+        let key = getKey(boids[i].position)
+        spatialLookup.push({ index: i, cellKey: key })
+        startIndices.push(Infinity)
+    }
+
+    spatialLookup.sort(function (a, b) {
+        return a.cellKey - b.cellKey
+    })
+
+    for (i in spatialLookup) {
+        let key = spatialLookup[i].cellKey
+        let keyPrev
+        if (i == 0) {
+            keyPrev = Infinity
+        } else {
+            keyPrev = spatialLookup[i - 1]
+        }
+        if (key != keyPrev) {
+            startIndices[key] = i
+        }
+    }
+}
+    </script>
+    <script>
+        function spawnBoids(){
+    boids.length = 0
+    for (let i = 0; i < boidAmount; i++) {
+        let x = (Math.random() - 0.5) * canvas.height * 0.9
+        let y = (Math.random() - 0.5) * canvas.height * 0.9
+        let z = (Math.random() - 0.5) * canvas.height * 0.9
+        let xVel = (Math.random() - 0.5) * 1
+        let yVel = (Math.random() - 0.5) * 1
+        let zVel = (Math.random() - 0.5) * 1
+        boids.push(new Boid(x, y, z, xVel, yVel, zVel))
+    }
+}
+
+class Boid {
+    constructor(x, y, z, xVel, yVel, zVel) {
+        this.position = new Vector(x, y, z)
+        this.visualPosition = new Vector(x, y, z)
+        this.velocity = new Vector(xVel, yVel, zVel)
+        this.direction = new Vector(xVel, yVel, zVel)
+        this.neighbors = []
+        this.neighborsAvrPos = new Vector()
+        this.neighborsAvrVel = new Vector()
+    }
+    transform(position) {
+        let newPos = vectorSub(position, camera)
+        let pos = new Vector()
+        pos.x = Math.cos(yAngle) * newPos.x + Math.sin(yAngle) * newPos.z
+        pos.y = newPos.y
+        pos.z = -Math.sin(yAngle) * newPos.x + Math.cos(yAngle) * newPos.z
+        newPos.x = pos.x
+        newPos.y = Math.cos(xAngle) * pos.y - Math.sin(xAngle) * pos.z
+        newPos.z = Math.sin(xAngle) * pos.y + Math.cos(xAngle) * pos.z
+        return newPos
+    }
+    lineTo(line) {
+        let x = line.x / line.z * zoom
+        let y = line.y / line.z * zoom
+        ctx.lineTo(x, y)
+    }
+    renderShape(size) {
+        let tip = this.transform(this.visualPosition)
+        if (tip.z < size * 2) return tip
+        ctx.moveTo(tip.x / tip.z * zoom, tip.y / tip.z * zoom)
+        let directionalAxis = normalize(this.direction)
+        let normalAxis = new Vector(-directionalAxis.y, directionalAxis.z, directionalAxis.x)
+        this.lineTo(vectorAdd(vectorSub(tip, vectorMult(directionalAxis, size)), vectorDiv(vectorMult(normalAxis, size), 3)))
+        this.lineTo(vectorSub(vectorSub(tip, vectorMult(directionalAxis, size)), vectorDiv(vectorMult(normalAxis, size), 3)))
+        this.lineTo(tip)
+        return tip
+    }
+    pickColor(tip, min = 0, max = 1000, toMin = 100){
+        let brightness = Math.min(Math.max(1 - ((tip.z - min) / (max - min)), 0), 1) * (255 - toMin) + toMin
+        ctx.strokeStyle = `rgb(${brightness}, ${brightness}, ${brightness})`
+    }
+    render(size = 15) {
+        ctx.resetTransform()
+        ctx.translate(canvas.width / 2, canvas.height / 2)
+        ctx.beginPath()
+        let tip = this.renderShape(size)
+        if (tip.z < size * 2) return
+        this.pickColor(tip, 50, canvas.height * 1)
+        ctx.stroke()
+    }
+    findNeighbors() {
+        this.neighbors = []
+        this.neighborsAvrPos = new Vector()
+        this.neighborsAvrVel = new Vector()
+        let total = 0
+
+        let searchRadius = 1
+        for (let x = 0; x < searchRadius * 2 + 1; x++) {
+            for (let y = 0; y < searchRadius * 2 + 1; y++) {
+                for (let z = 0; z < searchRadius * 2 + 1; z++) {
+                    let key = getKey(this.futurePosition, new Vector(x - searchRadius, y - searchRadius, z - searchRadius))
+                    let i = startIndices[key]
+                    let lim = 0
+                    while (whileCheck(i, key, lim)) {
+                        let boid = boids[spatialLookup[i].index]
+                        let futureBoidPosition = vectorAdd(boid.position, boid.velocity)
+                        i--
+
+                        let delta = vectorSub(this.futurePosition, futureBoidPosition)
+                        let dist = lengthOf(delta)
+                        if (dist > detectionRadius) continue
+
+                        let ownDirection = normalize(this.velocity)
+                        let directionToBoid = normalize(delta)
+                        let dot = dotProd(directionToBoid, ownDirection)
+                        if (dot < viewCone) continue
+
+                        this.neighbors.push(boid)
+                        this.neighborsAvrPos.add(futureBoidPosition)
+                        this.neighborsAvrVel.add(boid.velocity)
+
+                        total++
+                        lim++
+                    }
+                }
+            }
+        }
+        if (total != 0) {
+            this.neighborsAvrPos.div(total)
+            this.neighborsAvrVel.div(total)
+        }
+    }
+    
+    separate() {
+        let force = new Vector()
+        for (let i in this.neighbors) {
+            let boid = this.neighbors[i]
+            let futureBoidPosition = vectorAdd(boid.position, boid.velocity)
+            let delta = vectorSub(this.futurePosition, futureBoidPosition)
+            let dist = lengthOf(delta)
+            if (dist == 0) continue
+            force.add(vectorMult(delta, 10 / (dist * dist)))
+        }
+        return force
+    }
+    align() {
+        let force = vectorSub(this.neighborsAvrVel, this.velocity)
+        return force
+    }
+    cohere() {
+        let force = vectorSub(this.neighborsAvrPos, this.futurePosition)
+        return force
+    }
+
+    target(x = 0, y = 0, z = 0) {
+        let force = new Vector(x, y, z)
+        force.sub(this.position)
+        force.setLength(lengthOf(this.position) - canvas.height * 0.9 / 2)
+        return force
+    }
+    wrap() {
+        let boxSize = canvas.height * 0.9
+        let wrapped = false
+        if (Math.abs(this.position.x) > boxSize / 2) {
+            this.position.x = -Math.sign(this.position.x) * (boxSize / 2 - 1)
+            wrapped = true
+        }
+        if (Math.abs(this.position.y) > boxSize / 2) {
+            this.position.y = -Math.sign(this.position.y) * (boxSize / 2 - 1)
+            wrapped = true
+        }
+        if (Math.abs(this.position.z) > boxSize / 2) {
+            this.position.z = -Math.sign(this.position.z) * (boxSize / 2 - 1)
+            wrapped = true
+        }
+        return wrapped
+    }
+    turbulence() {
+        return new Vector(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5)
+    }
+
+    update() {
+        this.futurePosition = vectorAdd(this.position, this.velocity)
+        this.findNeighbors()
+        this.velocity.add(vectorMult(this.separate(), separationForce * staggerAmount))
+        this.velocity.add(vectorMult(this.align(), alignmentForce * staggerAmount))
+        this.velocity.add(vectorMult(this.cohere(), cohesionForce * staggerAmount))
+        this.velocity.add(vectorMult(this.turbulence(), turbulenceForce * staggerAmount))
+
+        if (Math.abs(this.position.x) > canvas.height * 0.9 / 2) {
+            this.velocity.add(vectorMult(this.target(0, this.position.y, this.position.z), boundForce * staggerAmount))
+        }
+        if (Math.abs(this.position.y) > canvas.height * 0.9 / 2) {
+            this.velocity.add(vectorMult(this.target(this.position.x, 0, this.position.z), boundForce * staggerAmount))
+        }
+        if (Math.abs(this.position.z) > canvas.height * 0.9 / 2) {
+            this.velocity.add(vectorMult(this.target(this.position.x, this.position.y, 0), boundForce * staggerAmount))
+        }
+
+        this.velocity.mult(1 + acceleration)
+        this.velocity.maxLim(speed)
+        this.velocity.minLim(speed / 5)
+    }
+    move() {
+        this.position.add(this.velocity)
+        this.direction.add(vectorMult(vectorSub(this.velocity, this.direction), 1 / staggerAmount))
+        //if (this.wrap()) {
+        if (false) {
+            this.visualPosition = this.position
+        } else {
+            this.visualPosition.add(vectorMult(vectorSub(this.position, this.visualPosition), 1 / staggerAmount))
+        }
+    }
+}
+
+function whileCheck(i, key, lim) {
+    if (lim >= maxBoidInView) return false
+    if (i < 0 || i > spatialLookup.length - 1) return false
+    return spatialLookup[i].cellKey == key
+}
+    </script>
+    <script>
+        // set up canvas
+const canvas = document.querySelector("canvas")
+const ctx = canvas.getContext("2d")
+
+let ratio = innerWidth / innerHeight
+canvas.width = 785 * ratio
+canvas.height = 785
+
+// set up inputs
+let keys = []
+
+// set up various variables
+let prevTime = 0
+let deltaTime = 0.016
+let stagger = 0
+let frames = 0
+let t = 0
+
+// set up list of boids
+const boids = []
+spawnBoids()
+
+function frame(time) {
+    // set up frame
+    requestAnimationFrame(frame)
+    if (time != undefined) {
+        deltaTime = (time - prevTime) * 0.001
+        prevTime = time
+    }
+    canvas.width = canvas.width
+    moveCamera()
+
+    //update boids
+    if (stagger == 0) {partition()}
+
+    for (let i = 0; i < boids.length; i += staggerAmount) {
+        let boid = boids[i + stagger]
+        if (i + stagger < boids.length) {boid.update()}
+    }
+
+    for (let i in boids) {
+        let boid = boids[i]
+        boid.render(boidSize)
+        boid.move()
+    }
+
+    // increment counters
+    stagger++
+    stagger %= staggerAmount
+    frames++
+    t = time
+}
+frame()
+
+// event listeners
+addEventListener("keydown", function (key) {
+    if (key.repeat) return
+    key = key.key.toLowerCase()
+
+    keys.push(key)
+    if (key == "l") console.log(t / frames)
+})
+
+addEventListener("keyup", function (key) {
+    key = key.key.toLowerCase()
+
+    while (keys.includes(key)) {
+        keys.splice(keys.indexOf(key), 1)
+    }
+})
+    </script>
+</body>
