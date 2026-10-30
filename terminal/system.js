@@ -57,7 +57,3 @@ colors.background.hex = colors.darkBlue.hex
 colors.error.hex = colors.red.hex
 colors.command.hex = colors.yellow.hex
 colors.title.hex = colors.green.hex
-
-addEventListener("touchstart", function(){
-    navigator.virtualKeyboard.show()
-})
