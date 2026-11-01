@@ -1,4 +1,5 @@
 let mode = localStorage.getItem("theme")
+console.log(mode)
 if (mode == null) {
     darkMode.call()
 }else{
