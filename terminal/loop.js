@@ -1,6 +1,6 @@
 let mode = localStorage.getItem("theme")
-if (!mode) {
-    darkMode.call()
+if (mode != "dark" && mode != "light" && mode != "super dark") {
+    global.findDirectoryByName("settings").findDirectoryByName("reset").call()
 }else{
     switch(mode){
         case "dark": darkMode.call(); break

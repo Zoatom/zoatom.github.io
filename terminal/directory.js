@@ -381,6 +381,7 @@ global.subDirectories.push(
         lineSpaceDir.call(1.25)
         marginDir.call(16)
         paddingDir.call(16)
+        localStorage.clear()
     }),
     darkMode,
     lightMode,
