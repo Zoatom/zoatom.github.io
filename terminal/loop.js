@@ -1,5 +1,4 @@
 let mode = localStorage.getItem("theme")
-console.log(mode)
 if (mode == null) {
     global.findDirectoryByName("settings").findDirectoryByName("reset").call()
 }else{
