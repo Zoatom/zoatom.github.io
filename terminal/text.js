@@ -1,99 +1,101 @@
+let fontSize
+let maxWidth
+
 class Line{
-    constructor(text, color){
-        this.text = text
-        this.color = color
+    constructor(text = ""){
+        this.text = text.toString()
+        this.colorMap = new Map()
+        this.colorMap.set(0, textColor)
+    }
+    render(lineCount = 0, cutoff = Infinity){
+        let renderedText = this.text.toString()
+        if(renderedText.length > cutoff){
+            renderedText = renderedText.slice(0, cutoff + 1)
+        }
+        let spaceLength = ctx.measureText(" ").width
+        let words = renderedText.split(" ")
+        let letterIndex = 0
+        let x = 0
+        let length = 0
+        let i = 0
+        let emergency = 0
+        while(i < words.length && emergency < 200){
+            length += ctx.measureText(words[i]).width
+            words[i] += " "
+            if (length <= maxWidth){
+                for(let j = 0; j < words[i].length; j++){
+                    let color = this.colorMap.get(letterIndex)
+                    if (color) ctx.fillStyle = color.color
+                    let char = renderedText[letterIndex]
+                    if (char != undefined){
+                        ctx.fillText(char, x, lineCount * fontSize * lineSpacing)
+                        x += ctx.measureText(char).width
+                        letterIndex++
+                    }
+                }
+                length += spaceLength
+            }else{
+                length = 0
+                x = 0
+                lineCount++
+                words[i] = words[i].slice(0, words[i].length - 1)
+                i--
+            }
+            i++
+            emergency++
+        }
+        return lineCount
     }
 }
 
-let animationSpeed = 1
-const padding = 16
-let fontSize = canvas.size / 32
-
 const text = []
-const inputLine = new Line(" ", colors.text)
+text.maxLength = 0
 
-text.write = function(text = "", color = colors.text){
-    this.push(new Line(text, color))
+function spacesNeededToCenter(text){
+    let spaceLength = ctx.measureText(" ").width
+    let textWidth = ctx.measureText(text).width
+    let amount = Math.floor((maxWidth - textWidth) / 2 / spaceLength)
+    let spaces = ""
+    for(let i = 0; i < amount; i++){
+        spaces += " "
+    }
+    return spaces
+}
+
+function writeText(text, color = textColor){
+    let newLine = new Line(text)
+    newLine.colorMap.set(0, color)
+    writeLine(newLine)
+}
+function writeLine(line){
+    text.push(line)
 }
 
 text.getTotalLength = function(){
     let length = 0
     this.forEach(function(line){
-        length += line.text.length
+        length += line.text.toString().length
     })
     return length
 }
 
-text.maxCharacters = 0
-text.update = function(){
-    text.maxCharacters += animationSpeed
-    text.maxCharacters = Math.min(text.maxCharacters, text.getTotalLength())
-}
-
 text.render = function(){
-    ctx.font = `${fontSize}px pixelFont`
+    ctx.font = fontSize + "px pixelFont"
     ctx.textBaseline = "top"
-    let characterCount = 0
-    let l = 0
-    
+    let lineCount = 0
+    let charCount = 0
     this.forEach(function(line){
-        ctx.fillStyle = line.color.hex
-        renderedText = line.text
-        if (characterCount + renderedText.length < text.maxCharacters){
-            characterCount += renderedText.length
-        }else{
-            renderedText = renderedText.slice(0, Math.floor(text.maxCharacters - characterCount))
-            characterCount = text.maxCharacters
+        charCount += line.text.length
+        let cutoff = Infinity
+        let rest = charCount - text.maxLength
+        if (rest > 0){
+            cutoff = line.text.length - rest
+            charCount -= rest - 1
         }
-        let lines = getLines(renderedText, canvas.size - padding * 2)
-        lines.forEach(function(line){
-            ctx.fillText(line, padding, padding + (l) * fontSize)
-            l++
-        })
+        lineCount = line.render(lineCount, cutoff)
+        if (cutoff >= 0) {
+            lineCount++
+        }
     })
-    return l
+    return lineCount
 }
-
-function getLines(text, maxWidth) {
-    let words = text.split(" ")
-    let lines = []
-    
-    let newLine = words[0]
-    for (let i = 1; i < words.length; i++) {
-        let segment = " " + words[i]
-        
-        let length = ctx.measureText(newLine + segment).width
-        if (length < maxWidth) {
-            newLine += segment
-        } else {
-            lines.push(newLine)
-            newLine = words[i]
-        }
-    }
-    lines.push(newLine)
-    
-    return lines
-}
-
-addEventListener("keydown", function(key){
-    key = key.key
-    switch (key){
-        case "Backspace":
-            inputLine.text = inputLine.text.slice(0, inputLine.text.length - 2)
-            inputLine.text += " "
-            break
-        case "Enter":
-            if (inputLine.text.length < 2) break
-            let isValid = commands.check(inputLine.text)
-            let color
-            isValid? color = colors.command: color = colors.text
-            text.write(inputLine.text.slice(0, inputLine.text.length - 1), color)
-            text.maxCharacters = text.getTotalLength()
-            inputLine.text = " "
-            isValid? commands.call(): text.write("Invalid command", colors.error)
-            break
-    }
-    if (key.length > 1) return
-    inputLine.text = inputLine.text.slice(0, inputLine.text.length - 1)
-    inputLine.text += key + " "
-})

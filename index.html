@@ -1,20 +1,34 @@
 <style>
     body{
+        margin: 0;
+        display: flex;
+        align-items: center;
         background-color: black;
+    }
+    div{
+        width: 100%;
         display: flex;
         justify-content: center;
-        align-items: center;
+        position: fixed;
+    }
+    canvas{
         cursor: none;
     }
 </style>
 <meta charset="UTF-8">
-<link rel="icon" href="Icon.png">
+<link rel="icon" href="terminal/Icon.png">
 <title>Zoatom</title>
 <body>
-    <canvas></canvas>
+    <div>
+        <canvas></canvas>
+    </div>
 </body>
-<script src="terminal/canvas.js"></script>
 <script src="terminal/system.js"></script>
+<script src="terminal/colors.js"></script>
+<script src="terminal/canvas.js"></script>
+<script src="terminal/qwertyMap.js"></script>
+<script src="terminal/string.js"></script>
 <script src="terminal/text.js"></script>
-<script src="terminal/commands.js"></script>
+<script src="terminal/directory.js"></script>
+<script src="terminal/input.js"></script>
 <script src="terminal/loop.js"></script>

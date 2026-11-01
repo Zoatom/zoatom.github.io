@@ -1,31 +1,56 @@
-text.write('              ### ### ### ### ### ###', colors.title)
-text.write('              ½## #½# #½# ½#½ #½# ###', colors.title)
-text.write('              #½½ #½# ### ½#½ #½# ###', colors.title)
-text.write('              ### ### #½# ½#½ ### #½#', colors.title)
-text.write('              ')
-text.write('½         Personal Projects I Felt Like Sharing', colors.command)
-text.write('              ')
-text.write('Type "help" to get a list of valid commands')
+let mode = localStorage.getItem("theme")
+if (!mode) {
+    darkMode.call()
+}else{
+    switch(mode){
+        case "dark": darkMode.call(); break
+        case "light": lightMode.call(); break
+        case "super dark": superDarkMode.call(); break
+    }
+}
+let offset
+let offsetLock = true
+clear.call()
 
-let mode = "command"
+let loading = true
 
-let totalLines = 0
+let animationSpeed = Number(localStorage.getItem("animation speed"))
+if(!isFinite(animationSpeed)) animationSpeed = 1
+let lineSpacing = Number(localStorage.getItem("line spacing"))
+if(!isFinite(lineSpacing)) lineSpacing = 1.2
+
+
+let lineCount = 0
 function onupdate(){
     canvas.clear()
-    ctx.translate(0, Math.min(0, -(totalLines + 1) * fontSize + canvas.size))
+    let lowerBorder = lineCount - (maxWidth / fontSize / lineSpacing) + 2
+    if (offset > lowerBorder){
+        offset = lowerBorder
+        offsetLock = true
+    }
+    fontSize = canvas.size / 32
+    maxWidth = canvas.size - margin * 2
 
-    text.update()
-    let lineIndex = text.render()
-    
-    inputLine.text = inputLine.text.slice(0, inputLine.text.length - 1)
-    Math.floor(time * 2) % 2 == 0? inputLine.text += "|": inputLine.text += " "
-    
-    let inputLines = getLines(inputLine.text, canvas.size - padding * 2)
-    inputLines.forEach(function(line, index){
-        ctx.fillStyle = inputLine.color.hex
-        ctx.fillText(line, padding, padding + (lineIndex + index) * fontSize)
-    })
-    totalLines = lineIndex + inputLines.length
+    if(offsetLock) offset = lowerBorder
+    offset = Math.max(offset, 0)
+    ctx.translate(margin, margin -Math.floor(offset) * fontSize * lineSpacing)
+    text.maxLength += animationSpeed * (60 * deltaTime)
+    text.maxLength = Math.min(text.getTotalLength(), text.maxLength)
+    text.maxLength = Math.max(0, text.maxLength)
+    lineCount = text.render(lineCount)
+    inputLine.render(lineCount)
+    inputLine.animate()
 
-    canvas.style.backgroundColor = colors.background.hex
+    // startup
+    let fonts = [...document.fonts.values()]
+    if (fonts.length > 0 && loading){
+        loading = false
+        printTitle.call()
+        writeText('Type "help" to get a list of valid commands')
+    }
+}
+
+document.onwheel = function(wheel){
+    offset += wheel.deltaY / (fontSize * lineSpacing)
+    if (wheel.deltaY < 0) offsetLock = false
 }
