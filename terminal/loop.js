@@ -1,6 +1,6 @@
 let mode = localStorage.getItem("theme")
-if (mode != "dark" && mode != "light" && mode != "super dark") {
-    global.findDirectoryByName("settings").findDirectoryByName("reset").call()
+if (mode == null) {
+    darkMode.call()
 }else{
     switch(mode){
         case "dark": darkMode.call(); break
@@ -15,9 +15,9 @@ clear.call()
 let loading = true
 
 animationSpeed = Number(localStorage.getItem("animation speed"))
-if(!isFinite(animationSpeed)) animationSpeed = 1
+if(animationSpeed == null) animationSpeed = 1
 lineSpacing = Number(localStorage.getItem("line spacing"))
-if(!isFinite(lineSpacing)) lineSpacing = 1.2
+if(lineSpacing == null) lineSpacing = 1.2
 
 
 let lineCount = 0
