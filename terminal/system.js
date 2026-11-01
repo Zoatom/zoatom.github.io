@@ -1,3 +1,6 @@
+let animationSpeed
+let lineSpacing
+
 let time = 0
 let previousTime = 0
 let deltaTime = 1/60

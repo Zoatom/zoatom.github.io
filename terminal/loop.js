@@ -14,9 +14,9 @@ clear.call()
 
 let loading = true
 
-let animationSpeed = Number(localStorage.getItem("animation speed"))
+animationSpeed = Number(localStorage.getItem("animation speed"))
 if(!isFinite(animationSpeed)) animationSpeed = 1
-let lineSpacing = Number(localStorage.getItem("line spacing"))
+lineSpacing = Number(localStorage.getItem("line spacing"))
 if(!isFinite(lineSpacing)) lineSpacing = 1.2
 
 
